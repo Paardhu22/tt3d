@@ -44,40 +44,39 @@ def generate_world_with_models(description: str):
         if response.status_code == 200:
             result = response.json()
             
-            # Print progress messages
-            print("\n📋 Progress Messages:")
-            print("-" * 70)
-            for msg in result.get("messages", []):
-                print(msg)
-            
-            # Print summary
-            print("\n" + "=" * 70)
-            print("✅ GENERATION COMPLETE!")
-            print("=" * 70)
-            
-            world = result.get("world", {})
-            world_plan = world.get("world_plan", {})
-            
-            print(f"\n📊 World Summary:")
-            print(f"  Environment: {world_plan.get('environment')}")
-            print(f"  Mood: {world_plan.get('mood')}")
-            print(f"  Style: {world_plan.get('style')}")
-            print(f"  Objects: {len(world.get('objects', []))}")
-            
-            print(f"\n💾 Files Saved:")
-            print(f"  JSON: {result.get('saved_to')}")
-            
-            models = result.get("models", [])
-            if models:
-                print(f"  3D Models: {len(models)} .obj files")
-                for model in models:
-                    print(f"    ✓ {model['name']}: {model['path']}")
-            else:
-                print(f"  3D Models: None (Tripo3D not configured)")
-            
-            print(f"\n⏱️  Total Time: {elapsed:.2f} seconds")
-            
-            return result
+            # Extract metadata from response with error handling
+            try:
+                metadata = result.get("metadata", {})
+                design = metadata.get("design", {})
+                schema = metadata.get("schema", {})
+                layout = metadata.get("layout", {})
+                
+                # Print summary
+                print("\n" + "=" * 70)
+                print("✅ GENERATION COMPLETE!")
+                print("=" * 70)
+                
+                print(f"\n📊 World Summary:")
+                print(f"  Biome: {design.get('biome', 'N/A')}")
+                print(f"  Terrain: {design.get('terrain_type', 'N/A')}")
+                print(f"  Mood: {design.get('mood', 'N/A')}")
+                print(f"  Time of Day: {design.get('time_of_day', 'N/A')}")
+                print(f"  Scale: {design.get('scale_km', 0):.1f} km")
+                print(f"  Objects: {len(layout.get('objects', []))}")
+                print(f"  Vegetation: {layout.get('vegetation_count', 0)}")
+                
+                print(f"\n💾 Files Saved:")
+                print(f"  World Directory: {result.get('world_path', 'N/A')}")
+                print(f"  Preview Image: {result.get('preview_image', 'N/A')}")
+                print(f"  Unity Import Script: {result.get('unity_import', 'N/A')}")
+                
+                print(f"\n⏱️  Total Time: {elapsed:.2f} seconds")
+                
+                return result
+            except (KeyError, TypeError) as e:
+                print(f"\n❌ Error parsing response: {e}")
+                print("Raw response structure may have changed")
+                return None
         else:
             print(f"\n❌ Error {response.status_code}: {response.text}")
             return None
@@ -96,33 +95,54 @@ def generate_world_with_models(description: str):
 
 def list_generated_worlds():
     """List all generated worlds and their models."""
-    output_dir = Path("output/generated_worlds")
+    exports_dir = Path("exports")
     
-    if not output_dir.exists():
-        print("No generated worlds found.")
+    if not exports_dir.exists():
+        print("\nNo generated worlds found in exports directory.")
         return
     
     print("\n" + "=" * 70)
     print("📁 Generated Worlds")
     print("=" * 70)
     
-    json_files = sorted(output_dir.glob("world_*.json"))
+    # Look for world directories
+    world_dirs = sorted([d for d in exports_dir.glob("world_*") if d.is_dir()])
     
-    for json_file in json_files:
-        print(f"\n📄 {json_file.name}")
+    if not world_dirs:
+        print("\nNo generated worlds found.")
+        return
+    
+    for world_dir in world_dirs:
+        world_subdir = world_dir / "world"
+        if not world_subdir.exists():
+            continue
+            
+        print(f"\n📄 {world_dir.name}")
         
-        # Check for corresponding models directory
-        model_dir_name = json_file.stem + "_models"
-        model_dir = output_dir / model_dir_name
+        # Check for world.json metadata
+        metadata_file = world_subdir / "world.json"
+        if metadata_file.exists():
+            import json
+            with open(metadata_file) as f:
+                metadata = json.load(f)
+                design = metadata.get("design", {})
+                layout = metadata.get("layout", {})
+                print(f"   🌍 Biome: {design.get('biome', 'N/A')}")
+                print(f"   🏔️  Terrain: {design.get('terrain_type', 'N/A')}")
+                print(f"   📏 Scale: {design.get('scale_km', 0):.1f} km")
+                print(f"   🏗️  Objects: {len(layout.get('objects', []))}")
+                print(f"   🌳 Vegetation: {layout.get('vegetation_count', 0)}")
         
-        if model_dir.exists():
-            obj_files = list(model_dir.glob("*.obj"))
-            print(f"   🎨 3D Models: {len(obj_files)} .obj files")
-            for obj_file in obj_files:
-                size_kb = obj_file.stat().st_size / 1024
-                print(f"      - {obj_file.name} ({size_kb:.1f} KB)")
-        else:
-            print(f"   🎨 3D Models: None")
+        # Check for OBJ file
+        obj_file = world_subdir / "world.obj"
+        if obj_file.exists():
+            size_mb = obj_file.stat().st_size / (1024 * 1024)
+            print(f"   🎨 3D Model: world.obj ({size_mb:.2f} MB)")
+        
+        # Check for preview
+        preview_file = world_subdir / "preview.png"
+        if preview_file.exists():
+            print(f"   🖼️  Preview: preview.png")
 
 
 if __name__ == "__main__":
@@ -139,5 +159,5 @@ if __name__ == "__main__":
     list_generated_worlds()
     
     print("\n" + "=" * 70)
-    print("✨ Done! Check output/generated_worlds/ for files")
+    print("✨ Done! Check exports/world_*/ for files")
     print("=" * 70)

@@ -74,15 +74,15 @@ Write-Host "  Installation Complete!" -ForegroundColor Cyan
 Write-Host "========================================" -ForegroundColor Cyan
 Write-Host ""
 Write-Host "Next steps:" -ForegroundColor Yellow
-Write-Host "  1. Edit .env file and add your API keys" -ForegroundColor White
-Write-Host "     - OPENAI_API_KEY=sk-..." -ForegroundColor Gray
-Write-Host "     - TRIPO_API_KEY=tsk-..." -ForegroundColor Gray
+Write-Host "  1. Configure .env file (optional - uses defaults)" -ForegroundColor White
+Write-Host "     Copy-Item .env.template .env" -ForegroundColor Gray
+Write-Host "     Edit LOCAL_LLM_MODEL if needed" -ForegroundColor Gray
 Write-Host ""
-Write-Host "  2. Run the generator:" -ForegroundColor White
-Write-Host "     python main.py" -ForegroundColor Gray
+Write-Host "  2. Start the API server:" -ForegroundColor White
+Write-Host "     uvicorn app.api:app --host 0.0.0.0 --port 8000" -ForegroundColor Gray
 Write-Host ""
-Write-Host "  3. Or try examples:" -ForegroundColor White
-Write-Host "     python examples.py" -ForegroundColor Gray
+Write-Host "  3. Run example:" -ForegroundColor White
+Write-Host "     python examples/generate_world_example.py" -ForegroundColor Gray
 Write-Host ""
 Write-Host "📖 Read README.md for full documentation" -ForegroundColor Cyan
 Write-Host "🚀 Read QUICKSTART.md for quick start guide" -ForegroundColor Cyan
