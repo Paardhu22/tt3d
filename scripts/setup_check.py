@@ -64,8 +64,14 @@ def check_env_file():
         for key in required_keys:
             if f"{key}=" in content:
                 value = [line for line in content.split("\n") if line.startswith(f"{key}=")]
-                if value and value[0].split("=", 1)[1].strip():
-                    print(f"✅ {key} configured")
+                if value:
+                    parts = value[0].split("=", 1)
+                    configured = len(parts) > 1 and parts[1].strip()
+                    if configured:
+                        print(f"✅ {key} configured")
+                    else:
+                        print(f"⚠️  {key} needs to be set")
+                        missing_keys.append(key)
                 else:
                     print(f"⚠️  {key} needs to be set")
                     missing_keys.append(key)

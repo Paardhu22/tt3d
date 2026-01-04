@@ -19,6 +19,8 @@ from app.schemas import (
     WorldSchema,
 )
 
+MAX_VEGETATION_INSTANCES = 4000
+
 
 @dataclass
 class MeshAsset:
@@ -136,7 +138,7 @@ class ProceduralEngine:
 
     def _scatter_vegetation(self, schema: WorldSchema, heightmap: np.ndarray, rng: random.Random) -> List[MeshAsset]:
         count = int(schema.vegetation.density_per_km2 * max(schema.scale_km, 1))
-        count = min(count, 4000)  # avoid excessive meshes
+        count = min(count, MAX_VEGETATION_INSTANCES)
         size_m = schema.scale_km * 1000
         assets: List[MeshAsset] = []
         base_mesh = trimesh.creation.cone(radius=1.1, height=4.5, sections=12)

@@ -22,6 +22,8 @@ class LocalLLMClient:
         self.temperature = temperature if temperature is not None else float(os.getenv("LLM_TEMPERATURE", "0.25"))
         self.provider = (provider or os.getenv("LLM_PROVIDER", "transformers")).lower()
         self.max_new_tokens = int(os.getenv("LLM_MAX_NEW_TOKENS", "768"))
+        self.device_map = os.getenv("LLM_DEVICE_MAP", "auto")
+        self.precision = os.getenv("LLM_PRECISION", "auto").lower()
         self._pipeline = None
         self._lock = threading.Lock()
 
@@ -43,12 +45,22 @@ class LocalLLMClient:
         with self._lock:
             if self._pipeline is not None:
                 return
-            logger.info("Loading local LLM model '%s' with provider transformers", self.model)
+            logger.info(
+                "Loading local LLM model '%s' with provider transformers (device=%s precision=%s)",
+                self.model,
+                self.device_map,
+                self.precision,
+            )
+            dtype = "auto"
+            if self.precision in {"fp16", "float16"}:
+                dtype = torch.float16
+            elif self.precision in {"bf16", "bfloat16"}:
+                dtype = torch.bfloat16
             tokenizer = AutoTokenizer.from_pretrained(self.model)
             model = AutoModelForCausalLM.from_pretrained(
                 self.model,
-                device_map="auto",
-                torch_dtype="auto",
+                device_map=self.device_map,
+                torch_dtype=dtype,
             )
             self._pipeline = pipeline(
                 "text-generation",

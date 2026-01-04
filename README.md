@@ -62,6 +62,7 @@ cp .env.template .env
 # Example:
 # LOCAL_LLM_MODEL=TheBloke/Mistral-7B-Instruct-v0.2-GGUF
 # LLM_PROVIDER=transformers
+# Optional: LLM_DEVICE_MAP=auto, LLM_PRECISION=float16
 ```
 
 ### 3. Run API Server

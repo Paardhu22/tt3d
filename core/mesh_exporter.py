@@ -1,4 +1,4 @@
-"\"\"\"Export procedural world into OBJ/MTL plus metadata.\"\"\""
+"""Export procedural world into OBJ/MTL plus metadata."""
 from __future__ import annotations
 
 import json

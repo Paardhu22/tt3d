@@ -83,11 +83,13 @@ SCHEMA_PROMPT: Final[str] = """
 }
 """
 
+MAX_SEED_SPACE: Final[int] = 2**20
+
 
 def _fallback_schema(design: WorldDesignSpec, seed: int | None) -> WorldSchema:
     rng = random.Random(seed or 42)
 
-    base_seed = rng.randint(0, 2**20)
+    base_seed = rng.randint(0, MAX_SEED_SPACE)
     octaves = rng.randint(4, 7)
     frequency = rng.uniform(0.3, 0.8)
     amplitude = rng.uniform(90, 210)
