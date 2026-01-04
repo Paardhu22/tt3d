@@ -21,10 +21,15 @@ def check_dependencies():
     required = {
         "dotenv": "python-dotenv",
         "requests": "requests",
-        "openai": "openai",
-        "numpy": "numpy"
+        "transformers": "transformers",
+        "torch": "torch",
+        "numpy": "numpy",
+        "trimesh": "trimesh",
+        "noise": "noise",
+        "shapely": "shapely",
+        "PIL": "pillow",
     }
-    
+
     missing = []
     for module, package in required.items():
         try:
@@ -33,7 +38,7 @@ def check_dependencies():
         except ImportError:
             print(f"❌ {package} not installed")
             missing.append(package)
-    
+
     if missing:
         print(f"\n⚠️  Install missing packages:")
         print(f"    pip install {' '.join(missing)}")
@@ -43,56 +48,58 @@ def check_dependencies():
 def check_env_file():
     """Check if .env file exists and has required keys"""
     env_path = Path(".env")
-    
+
     if not env_path.exists():
         print("❌ .env file not found")
-        print("   Copy .env.template to .env and add your API keys")
+        print("   Copy .env.template to .env and set LOCAL_LLM_MODEL")
         return False
-    
+
     print("✅ .env file exists")
-    
-    # Check for required keys
-    required_keys = ["OPENAI_API_KEY", "TRIPO_API_KEY"]
+
+    required_keys = ["LOCAL_LLM_MODEL"]
     missing_keys = []
-    
+
     with open(env_path) as f:
         content = f.read()
         for key in required_keys:
             if f"{key}=" in content:
-                value = [line for line in content.split('\n') if line.startswith(f"{key}=")]
-                if value and "your_" not in value[0] and value[0].split('=')[1].strip():
-                    print(f"✅ {key} configured")
+                value = [line for line in content.split("\n") if line.startswith(f"{key}=")]
+                if value:
+                    parts = value[0].split("=", 1)
+                    configured = len(parts) > 1 and parts[1].strip()
+                    if configured:
+                        print(f"✅ {key} configured")
+                    else:
+                        print(f"⚠️  {key} needs to be set")
+                        missing_keys.append(key)
                 else:
                     print(f"⚠️  {key} needs to be set")
                     missing_keys.append(key)
             else:
                 print(f"❌ {key} missing")
                 missing_keys.append(key)
-    
+
     if missing_keys:
         print(f"\n⚠️  Update these keys in .env:")
         for key in missing_keys:
-            if key == "OPENAI_API_KEY":
-                print(f"    {key}=sk-...  (from https://platform.openai.com/api-keys)")
-            elif key == "TRIPO_API_KEY":
-                print(f"    {key}=tsk-... (from https://platform.tripo3d.ai/)")
+            print(f"    {key}=<local checkpoint or Ollama model name>")
         return False
-    
+
     return True
 
 def check_project_structure():
     """Verify all required files exist"""
     required_files = [
-        "main.py",
-        "tsuana.py",
-        "user_profile.py",
-        "prompts.py",
-        "threed_generator.py",
-        "scene_composer.py",
+        "app/api.py",
+        "app/prompt_service.py",
+        "app/world_service.py",
+        "core/world_generator.py",
+        "core/procedural_engine.py",
+        "core/mesh_exporter.py",
         "requirements.txt",
-        "README.md"
+        "README.md",
     ]
-    
+
     missing = []
     for file in required_files:
         if Path(file).exists():
@@ -100,7 +107,7 @@ def check_project_structure():
         else:
             print(f"❌ {file} missing")
             missing.append(file)
-    
+
     return len(missing) == 0
 
 def main():
@@ -125,7 +132,7 @@ def main():
     
     if python_ok and deps_ok and env_ok and structure_ok:
         print("✅ All checks passed! You're ready to generate 3D worlds.")
-        print("\n🚀 Run: python main.py")
+        print("\n🚀 Run: uvicorn app.api:app --reload")
     else:
         print("⚠️  Some checks failed. Please fix the issues above.")
         print("\n📖 See README.md for detailed setup instructions")

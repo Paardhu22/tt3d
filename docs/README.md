@@ -118,24 +118,31 @@ Describe the 3D world you want to create.
 
 ```
 tsuana/
-├── main.py                 # Main entry point
-├── tsuana.py              # AI scene planning engine
-├── user_profile.py        # User preference management
-├── prompts.py             # AI system prompts
-├── threed_generator.py    # 3D object generation (Tripo3D API)
-├── scene_composer.py      # Scene composition and export
-├── requirements.txt       # Python dependencies
-├── .env.template         # Environment config template
-├── .env                  # Your API keys (gitignored)
-├── .gitignore           # Git ignore rules
-└── README.md            # This file
+├── app/                 # FastAPI + LLM orchestration
+│   ├── api.py           # REST endpoints
+│   ├── ai_client.py     # Local LLM wrapper (Transformers/Ollama)
+│   ├── prompt_service.py# Stage 1: Design spec
+│   ├── world_service.py # Stage 2: Schema generation
+│   └── schemas.py       # Pydantic models
+├── core/                # Procedural generation
+│   ├── world_generator.py  # Orchestrator
+│   ├── procedural_engine.py# Terrain/roads/structures/vegetation
+│   ├── mesh_exporter.py    # OBJ/MTL/textures export
+│   └── music_generator.py  # Procedural ambient audio
+├── requirements.txt     # Python dependencies
+├── .env.template        # Environment config template
+├── .env                 # Local model config (gitignored)
+├── .gitignore
+└── README.md
 
-output/                   # Generated content (created at runtime)
-├── *.glb                # 3D models
-├── scene_data.json      # Scene configuration
-├── vr_viewer.html       # WebVR viewer
-├── ImportScene.cs       # Unity import script
-└── generation_report.json  # Generation summary
+exports/                 # Generated content (created at runtime)
+└── world_YYYYMMDD_HHMMSS/world/
+    ├── geometry/world.obj
+    ├── world.mtl
+    ├── textures/*.png
+    ├── world.json
+    ├── unity_import.cs
+    └── preview.png
 ```
 
 ## 🔧 Architecture
@@ -143,33 +150,31 @@ output/                   # Generated content (created at runtime)
 ### Pipeline Overview
 
 ```
-User Input → AI Planning → Object Generation → Scene Composition → Export
-    ↓            ↓               ↓                    ↓              ↓
-  Natural    Structured      3D Models          Positioned       GLB/GLTF
-  Language     JSON          via API            Objects          + HTML VR
+User Input → Design Spec → Procedural Schema → Mesh Synthesis → Export
+    ↓             ↓                 ↓                 ↓              ↓
+  Natural    Structured        Heightmap +       Terrain + Roads   OBJ/MTL +
+  Language    World Spec        Rules JSON        Vegetation       JSON/Preview
 ```
 
 ### Key Components
 
-#### 1. **Tsuana AI Engine** (`tsuana.py`)
-- Interprets user intent
-- Asks clarifying questions
-- Generates structured world plans
-- Powered by OpenAI GPT-4
+#### 1. **Design Spec Generator** (`app/prompt_service.py`)
+- Converts raw text into `WorldDesignSpec` (biome, terrain, landmarks, mood, scale)
+- Uses local open-source LLM (Transformers/Ollama)
 
-#### 2. **3D Generator** (`threed_generator.py`)
-- Interfaces with Tripo3D API
-- Handles text-to-3D generation
-- Implements retry logic and error handling
-- Downloads models in GLB/FBX/OBJ formats
+#### 2. **World Schema Generator** (`app/world_service.py`)
+- Produces strict `WorldSchema` JSON (noise params, splines, vegetation, lighting)
+- Enforces schema validation (`extra="forbid"`)
 
-#### 3. **Scene Composer** (`scene_composer.py`)
-- Positions objects in 3D space
-- Configures lighting and camera
-- Exports to multiple formats:
-  - Scene data (JSON)
-  - WebVR viewer (HTML + A-Frame)
-  - Unity import script (C#)
+#### 3. **Procedural Engine** (`core/procedural_engine.py`)
+- Builds Perlin/Simplex heightmaps
+- Generates spline-based roads/rivers, instanced vegetation, parametric structures
+- Deterministic seeds for reproducibility
+
+#### 4. **Exporter** (`core/mesh_exporter.py`)
+- Combines meshes into OBJ/MTL with baked textures
+- Writes `world.json` semantic layout and `preview.png`
+- Generates Unity import helper script
 
 ## 🎮 Output Formats
 

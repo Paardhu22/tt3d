@@ -3,8 +3,9 @@ Example usage of Tsuana 3D World Generator API.
 Demonstrates programmatic world generation without interactive prompts.
 """
 
+raise SystemExit("Use FastAPI endpoint /api/v1/world instead of legacy examples.")
+
 import json
-from threed_generator import Tripo3DGenerator
 from scene_composer import SceneComposer
 
 def example_1_simple_scene():
