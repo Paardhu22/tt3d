@@ -28,8 +28,8 @@ Transform natural language descriptions into complete, production-ready 3D virtu
 
 ### Prerequisites
 - Python 3.8 or higher
-- Tripo3D API key ([Get one here](https://platform.tripo3d.ai/))
-- OpenAI API key ([Get one here](https://platform.openai.com/api-keys))
+- pip package manager
+- (Optional) Local LLM model for enhanced generation
 
 ### Installation
 
@@ -43,19 +43,25 @@ Transform natural language descriptions into complete, production-ready 3D virtu
    pip install -r requirements.txt
    ```
 
-3. **Configure API keys**
+3. **Configure environment (optional)**
    ```bash
    # Copy the template
    cp .env.template .env
    
-   # Edit .env and add your API keys
-   # OPENAI_API_KEY=sk-...
-   # TRIPO_API_KEY=tsk_...
+   # Edit .env if you want to use custom LLM settings
+   # LOCAL_LLM_MODEL=mistralai/Mistral-7B-Instruct-v0.2
+   # LLM_PROVIDER=transformers
    ```
 
-4. **Run the generator**
+4. **Start the API server**
    ```bash
-   python main.py
+   uvicorn app.api:app --host 0.0.0.0 --port 8000 --reload
+   ```
+
+5. **Generate a world**
+   ```bash
+   # In another terminal
+   python examples/generate_world_example.py
    ```
 
 ### First Generation
@@ -221,55 +227,64 @@ Complete scene configuration:
 
 | Variable | Required | Description |
 |----------|----------|-------------|
-| `OPENAI_API_KEY` | Yes | OpenAI API key for scene planning |
-| `TRIPO_API_KEY` | Yes | Tripo3D API key for 3D generation |
+| `LOCAL_LLM_MODEL` | No | Local LLM model (default: mistralai/Mistral-7B-Instruct-v0.2) |
+| `LLM_PROVIDER` | No | LLM provider (default: transformers, options: transformers/ollama) |
+| `LLM_TEMPERATURE` | No | Temperature for LLM (default: 0.25) |
+| `LLM_MAX_NEW_TOKENS` | No | Max tokens for LLM (default: 768) |
 
 ### Customization
 
 #### Modify Generation Settings
-Edit `threed_generator.py`:
+Edit `app/world_service.py` to adjust world generation parameters:
 ```python
-result = generator.generate_from_text(
-    prompt=prompt,
-    model_version="v2.0-20240919",  # Change model version
-    style="realistic",               # "realistic", "cartoon", "low-poly"
-    timeout=300                      # Increase for complex objects
-)
+# Adjust object counts
+object_rules: List[ObjectPlacementRule] = [
+    ObjectPlacementRule(
+        kind="tower",
+        count=rng.randint(15, 35),  # Change counts
+        scale_range=(0.8, 2.2),
+        height_range=(30.0, 120.0),
+        ...
+    ),
+    ...
+]
 ```
 
-#### Adjust Scene Layout
-Edit `scene_composer.py`:
+#### Adjust Terrain Parameters
+Edit `core/procedural_engine.py`:
 ```python
-composer.auto_arrange_objects(layout="circle")  # or "grid", "random"
-composer.setup_default_lighting("warm")         # or "bright", "dark", "cool"
+def __init__(self, grid_resolution: int = 220):  # Change resolution
+    self.grid_resolution = grid_resolution
 ```
 
-## 📊 API Usage & Costs
+## 📊 Generation Performance
 
-### Tripo3D API
-- **Text-to-3D**: ~$0.05-0.20 per object (varies by plan)
-- **Generation Time**: 20-60 seconds per object
-- **Free Tier**: Check [Tripo3D pricing](https://www.tripo3d.ai/pricing)
-
-### OpenAI API
-- **GPT-4**: ~$0.01-0.03 per scene plan
-- **GPT-3.5-Turbo**: ~$0.001 per scene plan (edit `tsuana.py`)
-
-**Estimated Cost per Scene**: $0.50 - $2.00 (5-10 objects)
+### Procedural Generation
+- **World Creation**: 1-2 minutes for typical worlds
+- **Objects Generated**: 60+ structures per world
+- **Vegetation**: 4000+ instances
+- **Output Size**: 50-100 MB .obj files
+- **Cost**: Free - fully open source procedural generation
+- **Local LLM**: Optional, runs on your hardware
 
 ## 🔍 Troubleshooting
 
 ### Common Issues
 
-#### "TRIPO_API_KEY not found"
-- Ensure `.env` file exists in project root
-- Check API key is correctly formatted
-- Verify no extra spaces or quotes
+#### Server won't start
+- Ensure dependencies are installed: `pip install -r requirements.txt`
+- Check Python version: `python --version` (need 3.8+)
+- Verify port 8000 is not in use
 
-#### "Task timeout after 300s"
-- Increase timeout in `threed_generator.py`
-- Check Tripo3D API status
-- Try simpler object descriptions
+#### Generation is slow
+- The first run may be slower if downloading LLM models
+- Subsequent runs use the fallback procedural generator
+- Adjust `grid_resolution` in `procedural_engine.py` for faster generation
+
+#### Out of memory
+- Reduce `grid_resolution` in `core/procedural_engine.py`
+- Decrease `MAX_VEGETATION_INSTANCES` 
+- Use smaller `scale_km` values in requests
 
 #### "Failed to generate X objects"
 - Check `generation_report.json` for details
@@ -310,64 +325,66 @@ generations_counter = Counter('world_generations_total', 'Total worlds generated
 
 ## 📖 API Reference
 
-### Tripo3DGenerator
+### REST API
 
-```python
-from threed_generator import Tripo3DGenerator
+**Generate World**
+```bash
+POST /api/v1/world
+Content-Type: application/json
 
-generator = Tripo3DGenerator(api_key="your_key")
-
-result = generator.generate_from_text(
-    prompt="a medieval castle tower",
-    model_version="default",
-    style="realistic",
-    max_retries=3,
-    poll_interval=5,
-    timeout=300
-)
-
-# Returns:
 {
-    "task_id": "abc123",
-    "model_urls": {
-        "glb": "https://...",
-        "fbx": "https://...",
-        "obj": "https://..."
-    },
-    "thumbnail": "https://...",
-    "metadata": {...}
+  "description": "A magical forest clearing with glowing mushrooms",
+  "seed": 42  # Optional: for deterministic generation
 }
 ```
 
-### SceneComposer
+**Response**
+```json
+{
+  "world_path": "exports/world_20260104_175925/world",
+  "preview_image": "exports/world_20260104_175925/world/preview.png",
+  "unity_import": "exports/world_20260104_175925/world/unity_import.cs",
+  "metadata": {
+    "design": {
+      "biome": "forest",
+      "terrain_type": "rolling hills",
+      "scale_km": 25.0,
+      "mood": "mysterious",
+      "time_of_day": "twilight",
+      ...
+    },
+    "schema": {...},
+    "layout": {
+      "terrain_bounds_m": [25000, 25000],
+      "objects": [...],
+      "vegetation_count": 4000
+    }
+  }
+}
+```
+
+### Python SDK
 
 ```python
-from scene_composer import SceneComposer
+from app.schemas import GenerateWorldRequest
+from core.world_generator import world_generator
 
-composer = SceneComposer()
-
-composer.add_object(
-    name="tree",
-    model_path="tree.glb",
-    position=(3.0, 0.0, 0.0),
-    rotation=(0.0, 45.0, 0.0),
-    scale=(1.5, 1.5, 1.5)
+request = GenerateWorldRequest(
+    description="A cozy bedroom with a bed and nightstand",
+    seed=42  # Optional
 )
 
-composer.setup_default_lighting("warm")
-composer.set_camera((0, 1.6, 8))
-
-composer.export_scene_data("scene.json")
-composer.generate_aframe_html("viewer.html")
+response = world_generator.generate(request)
+print(f"World saved to: {response.world_path}")
 ```
 
 ## 🤝 Contributing
 
 Contributions welcome! Areas for improvement:
-- Additional 3D generation backends (Meshy, Rodin, local models)
-- Advanced scene composition algorithms
-- Real-time preview
-- Texture customization
+- Additional procedural structure types
+- Advanced terrain generation algorithms
+- Real-time preview capabilities
+- Enhanced vegetation systems
 - Animation support
 
 ## 📄 License
@@ -376,15 +393,15 @@ MIT License - See LICENSE file for details
 
 ## 🙏 Acknowledgments
 
-- **Tripo3D**: Production-ready text-to-3D API
-- **OpenAI**: GPT-4 for intelligent scene planning
-- **A-Frame**: WebVR framework for instant previews
+- **Trimesh**: For 3D mesh processing
+- **NumPy & SciPy**: For mathematical operations
+- **FastAPI**: For the REST API framework
+- **Transformers**: For local LLM support
 
 ## 📞 Support
 
 - **Issues**: Open a GitHub issue
-- **Email**: support@example.com
-- **Discord**: [Join our community](https://discord.gg/example)
+- **Documentation**: Check docs/ directory for guides
 
 ---
 
