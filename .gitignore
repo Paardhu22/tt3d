@@ -29,6 +29,7 @@ scene.png
 output.obj
 world_plan.json
 output/
+exports/
 *.glb
 *.gltf
 *.fbx
