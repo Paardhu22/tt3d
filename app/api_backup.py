@@ -1,4 +1,6 @@
-"""FastAPI application exposing the Text → 3D World generation pipeline."""
+"""Legacy FastAPI app (deprecated)."""
+raise SystemExit("Use app.api:app for the open-source pipeline.")
+
 import logging
 import json
 from datetime import datetime
@@ -10,7 +12,6 @@ from typing import List, Dict
 from app.prompt_service import generate_prompt
 from app.world_service import generate_world
 from app.schemas import WorldResponse
-from core.threed_generator import StabilityAIGenerator
 
 logger = logging.getLogger(__name__)
 logging.basicConfig(

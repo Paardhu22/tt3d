@@ -10,20 +10,17 @@ requests==2.31.0           # HTTP requests for API calls
 fastapi==0.115.5           # Web framework for API
 uvicorn==0.32.1            # ASGI server for FastAPI
 
-# OpenAI API
-# ----------
-openai==1.58.1             # AI-powered scene planning
-
-# Scientific Computing
-# --------------------
-numpy==1.26.4              # Numerical operations for positioning/transforms
-
-# Optional: Advanced 3D Processing
-# ---------------------------------
-# Uncomment if you need local 3D processing capabilities
-# trimesh==4.0.0           # 3D mesh processing
-# pygltflib==1.16.1        # GLTF file manipulation
-# pillow==10.1.0           # Image processing for textures
+# Open-Source LLM + Procedural
+# ----------------------------
+transformers==4.46.2
+torch==2.3.1
+sentencepiece==0.2.0
+numpy==1.26.4
+scipy==1.11.4
+trimesh==4.4.3
+noise==1.2.2
+shapely==2.0.4
+pillow==10.1.0
 
 # Development Dependencies (Optional)
 # -----------------------------------

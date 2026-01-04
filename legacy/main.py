@@ -1,7 +1,9 @@
 """
-Production-ready 3D VR World Generator - Main Entry Point
-Converts text descriptions into complete 3D virtual reality worlds.
+Legacy CLI entry point (deprecated).
+Use the FastAPI service at /api/v1/world for the supported pipeline.
 """
+
+raise SystemExit("Legacy CLI is deprecated. Run `uvicorn app.api:app --reload` instead.")
 
 import json
 import os
@@ -9,7 +11,6 @@ import logging
 from typing import Dict, Any, List
 from user_profile import UserProfile
 from tsuana import call_tsuana
-from threed_generator import Tripo3DGenerator
 from scene_composer import SceneComposer
 
 # Configure logging

@@ -104,15 +104,15 @@ Objects to generate: 6
 ### Troubleshooting
 - Check `generation_report.json` for details
 - Enable debug logging: `logging.basicConfig(level=logging.DEBUG)`
-- Verify API keys are correct
-- Ensure stable internet connection
+- Ensure your local LLM checkpoint is configured in `.env`
+- Use an offline-capable model to avoid network dependency
 
 ## 📚 Next Steps
 
 - Read [README.md](README.md) for full documentation
-- Explore `scene_composer.py` to customize layouts
-- Modify `prompts.py` to change AI behavior
-- Check `threed_generator.py` for generation settings
+- Explore `core/world_generator.py` to customize the pipeline
+- Tune `app/world_service.py` for schema defaults and seeds
+- Adjust `core/procedural_engine.py` for terrain/road/vegetation density
 
 ## ❓ Need Help?
 

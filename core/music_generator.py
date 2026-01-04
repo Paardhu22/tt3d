@@ -1,105 +1,44 @@
-"""
-Music generation service using Stability AI.
-Generates ambient music/soundscapes for 3D worlds.
-"""
+"""Procedural ambient audio generator (no external APIs)."""
+from __future__ import annotations
 
-import os
-import time
-import requests
-import logging
+import math
+import wave
+from pathlib import Path
 from typing import Optional
-from dotenv import load_dotenv
 
-load_dotenv()
-
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
-
-STABILITY_API_KEY = os.getenv("STABILITY_API_KEY")
-STABILITY_AUDIO_BASE = "https://api.stability.ai/v2beta/sound-generation/generate"
+import numpy as np
 
 
-class MusicGenerator:
-    """Generate ambient music for 3D worlds using Stability AI."""
-    
-    def __init__(self, api_key: Optional[str] = None):
-        self.api_key = api_key or STABILITY_API_KEY
-        if not self.api_key:
-            raise ValueError("STABILITY_API_KEY required for music generation")
-        
-        self.headers = {
-            "Authorization": f"Bearer {self.api_key}",
-        }
-    
-    def generate_ambient_music(
-        self,
-        description: str,
-        duration: int = 30,
-        output_path: str = "ambient_music.mp3"
-    ) -> Optional[str]:
-        """
-        Generate ambient music/soundscape.
-        
-        Args:
-            description: Music mood/style description
-            duration: Length in seconds (max 30)
-            output_path: Where to save the audio file
-            
-        Returns:
-            Path to saved audio file or None if failed
-        """
-        try:
-            logger.info(f"Generating ambient music: {description}")
-            
-            # Optimize prompt for ambient music
-            music_prompt = f"ambient {description} music, atmospheric, looping, no vocals, instrumental"
-            
-            data = {
-                "prompt": music_prompt,
-                "duration": min(duration, 30),  # API limit
-                "output_format": "mp3"
-            }
-            
-            response = requests.post(
-                STABILITY_AUDIO_BASE,
-                headers=self.headers,
-                files={"none": ""},
-                data=data,
-                timeout=120
-            )
-            
-            if response.status_code == 200:
-                # Save audio file
-                os.makedirs(os.path.dirname(output_path) or ".", exist_ok=True)
-                with open(output_path, "wb") as f:
-                    f.write(response.content)
-                
-                file_size = len(response.content) / 1024
-                logger.info(f"Music generated: {output_path} ({file_size:.2f} KB)")
-                return output_path
-            else:
-                logger.warning(f"Music generation failed: {response.status_code}")
-                return None
-                
-        except Exception as e:
-            logger.error(f"Music generation error: {e}")
-            return None
+def _brownian_noise(length: int, rng: np.random.Generator) -> np.ndarray:
+    steps = rng.normal(scale=0.02, size=length)
+    return np.cumsum(steps)
 
 
-def generate_world_music(
-    world_mood: str,
-    environment: str,
-    output_dir: str = "."
-) -> Optional[str]:
-    """Generate appropriate ambient music for a world."""
-    try:
-        generator = MusicGenerator()
-        description = f"{world_mood} {environment}"
-        output_path = os.path.join(output_dir, "ambient_music.mp3")
-        return generator.generate_ambient_music(description, output_path=output_path)
-    except ValueError:
-        logger.warning("Music generation not available (API key missing)")
-        return None
-    except Exception as e:
-        logger.error(f"Failed to generate music: {e}")
-        return None
+def generate_ambient_music(mood: str, output_dir: str | Path, duration_seconds: int = 45) -> Optional[str]:
+    sample_rate = 22050
+    length = duration_seconds * sample_rate
+    rng = np.random.default_rng(42)
+    base = _brownian_noise(length, rng)
+
+    mood = mood.lower()
+    harmonics = [0.25, 0.5, 0.75] if "calm" in mood or "serene" in mood else [0.3, 0.6, 0.9]
+    carrier_freq = 110 if "dark" in mood else 220
+    time = np.arange(length) / sample_rate
+    signal = np.zeros_like(base)
+    for h in harmonics:
+        signal += np.sin(2 * math.pi * (carrier_freq * h) * time)
+    signal = signal * 0.2 + base * 0.05
+    signal = np.clip(signal, -1.0, 1.0)
+
+    output_dir = Path(output_dir)
+    output_dir.mkdir(parents=True, exist_ok=True)
+    output_path = output_dir / "ambient_music.wav"
+
+    audio = (signal * 32767).astype(np.int16)
+    with wave.open(str(output_path), "w") as wf:
+        wf.setnchannels(1)
+        wf.setsampwidth(2)
+        wf.setframerate(sample_rate)
+        wf.writeframes(audio.tobytes())
+
+    return str(output_path)

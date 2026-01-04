@@ -8,14 +8,16 @@
 tsuana/
 ├── app/                    # FastAPI application layer
 │   ├── api.py             # REST API endpoints
-│   ├── ai_client.py       # OpenAI client wrapper
-│   ├── prompt_service.py  # Stage 1: Prompt refinement
-│   ├── world_service.py   # Stage 2: JSON world generation
+│   ├── ai_client.py       # Local LLM client (Transformers/Ollama)
+│   ├── prompt_service.py  # Stage 1: Prompt refinement → design spec
+│   ├── world_service.py   # Stage 2: Procedural schema generation
 │   └── schemas.py         # Pydantic validation models
 │
 ├── core/                   # 3D generation services
-│   ├── threed_generator.py # Tripo3D API client
-│   └── scene_composer.py   # Scene assembly & export
+│   ├── world_generator.py  # Orchestrator
+│   ├── procedural_engine.py# Procedural mesh synthesis
+│   ├── mesh_exporter.py    # OBJ/MTL/JSON export
+│   └── scene_composer.py   # Scene assembly helpers
 │
 ├── domain/                 # Domain models
 │   └── user_profile.py    # User preference models
@@ -56,9 +58,10 @@ pip install -r requirements.txt
 ### 2. Configure Environment
 ```bash
 cp .env.template .env
-# Edit .env and add:
-# OPENAI_API_KEY=sk-...
-# TRIPO_API_KEY=tsk-... (optional for 3D generation)
+# Edit .env and set a local model checkpoint (Transformers or Ollama)
+# Example:
+# LOCAL_LLM_MODEL=TheBloke/Mistral-7B-Instruct-v0.2-GGUF
+# LLM_PROVIDER=transformers
 ```
 
 ### 3. Run API Server
@@ -75,32 +78,31 @@ curl -X POST http://localhost:8000/api/v1/world \
 
 ## Architecture
 
-### Two-Stage AI Pipeline
+### Three-Stage AI/Procedural Pipeline
 
-**Stage 1: Prompt Generator** (`app/prompt_service.py`)
-- Input: Raw user description (text/voice)
-- Output: Refined world-building prompt (plain text)
-- Deterministic (temperature=0)
+**Stage 1: Prompt Refinement** (`app/prompt_service.py`)
+- Input: Raw user description
+- Output: Structured `WorldDesignSpec` (biome, terrain, mood, scale, landmarks)
 
-**Stage 2: World Generator** (`app/world_service.py`)
-- Input: Refined prompt
-- Output: Strict JSON validated against Pydantic schema
-- Enforced `response_format=json_object`
-- No markdown, no extras
+**Stage 2: World Schema Generation** (`app/world_service.py`)
+- Input: World design spec
+- Output: Strict `WorldSchema` JSON (heightmap noise, splines, vegetation, lighting)
+
+**Stage 3: Procedural Builder** (`core/procedural_engine.py`)
+- Input: World schema
+- Output: VR-ready meshes (terrain, roads, rivers, vegetation, structures) with deterministic seed
 
 ### API Endpoints
 
 - `GET /health` - Health check
-- `POST /api/v1/world` - Generate world JSON from description
+- `POST /api/v1/world` - Generate a complete OBJ world from description
 
-### Schema Validation
-
-All responses validated via Pydantic with `extra="forbid"`:
-- `WorldResponse` - Complete world configuration
-- `WorldPlan` - Environment, mood, style, scale
-- `WorldObject[]` - 3-12 objects with positions
-- `Lighting` - Mood-based lighting config
-- `Camera` - Position, target, FOV
+### Outputs
+- `/world/geometry/world.obj` + `world.mtl`
+- `/world/textures/*.png`
+- `/world/world.json` semantic layout
+- `/world/preview.png` heightmap preview
+- `/world/unity_import.cs` Unity importer
 
 ## Development
 
