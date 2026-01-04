@@ -40,8 +40,8 @@ class WorldBuildResult:
 class ProceduralEngine:
     """Build a VR-ready world using procedural techniques only."""
 
-    def __init__(self, grid_resolution: int = 180):
-        self.grid_resolution = grid_resolution
+    def __init__(self, grid_resolution: int = 220):
+        self.grid_resolution = grid_resolution  # Higher resolution for better detail
 
     def _generate_heightmap(self, schema: WorldSchema) -> np.ndarray:
         noise_cfg = schema.heightmap
@@ -122,18 +122,65 @@ class ProceduralEngine:
 
     def _make_structure(self, rule: ObjectPlacementRule, position: np.ndarray, scale: np.ndarray, idx: int) -> MeshAsset:
         kind = rule.kind
+        # Enhanced structure generation with more variety and detail
         if kind in {"tower", "spire"}:
-            mesh = trimesh.creation.cylinder(radius=6 * scale[0], height=scale[1] * 10)
+            # Create multi-segment towers with more detail
+            segments = 3
+            mesh_parts = []
+            for i in range(segments):
+                segment_scale = scale[0] * (1.0 - i * 0.15)  # Taper towards top
+                segment_height = scale[1] * 10 / segments
+                segment = trimesh.creation.cylinder(
+                    radius=7 * segment_scale, 
+                    height=segment_height,
+                    sections=16  # More detailed cylinder
+                )
+                segment.apply_translation([0, segment_height * i, 0])
+                mesh_parts.append(segment)
+            mesh = trimesh.util.concatenate(mesh_parts)
         elif kind == "bridge":
-            mesh = trimesh.creation.box(extents=(scale[0] * 40, scale[1] * 2.5, scale[0] * 12))
+            # Create more detailed bridge with supports
+            deck = trimesh.creation.box(extents=(scale[0] * 50, scale[1] * 2, scale[0] * 14))
+            support1 = trimesh.creation.cylinder(radius=scale[0] * 2, height=scale[1] * 8)
+            support1.apply_translation([-scale[0] * 15, -scale[1] * 4, 0])
+            support2 = trimesh.creation.cylinder(radius=scale[0] * 2, height=scale[1] * 8)
+            support2.apply_translation([scale[0] * 15, -scale[1] * 4, 0])
+            mesh = trimesh.util.concatenate([deck, support1, support2])
         elif kind == "dome":
-            mesh = trimesh.creation.icosphere(subdivisions=3, radius=scale[0] * 12)
+            # Create geodesic dome with more subdivisions
+            mesh = trimesh.creation.icosphere(subdivisions=4, radius=scale[0] * 15)
+            # Cut bottom half to make it a dome
+            mesh = mesh.slice_plane([0, 0, 0], [0, -1, 0])
+        elif kind == "hangar":
+            # Create hangar-style structure
+            base = trimesh.creation.box(extents=(scale[0] * 25, scale[1] * 6, scale[0] * 20))
+            roof = trimesh.creation.box(extents=(scale[0] * 26, scale[1] * 2, scale[0] * 21))
+            roof.apply_translation([0, scale[1] * 4, 0])
+            mesh = trimesh.util.concatenate([base, roof])
+        elif kind == "hub":
+            # Create central hub structure with multiple levels
+            base = trimesh.creation.cylinder(radius=15 * scale[0], height=scale[1] * 3, sections=8)
+            mid = trimesh.creation.cylinder(radius=12 * scale[0], height=scale[1] * 4, sections=8)
+            mid.apply_translation([0, scale[1] * 3.5, 0])
+            top = trimesh.creation.cylinder(radius=8 * scale[0], height=scale[1] * 3, sections=8)
+            top.apply_translation([0, scale[1] * 7, 0])
+            mesh = trimesh.util.concatenate([base, mid, top])
         else:
-            mesh = trimesh.creation.box(extents=(scale[0] * 12, scale[1] * 4, scale[0] * 12))
+            # Default to enhanced box structure
+            mesh = trimesh.creation.box(extents=(scale[0] * 15, scale[1] * 5, scale[0] * 15))
 
         mesh.apply_translation(position + np.array([0.0, mesh.extents[1] * 0.5, 0.0]))
-        material = "metal" if kind in {"tower", "spire"} else "concrete"
-        mesh.visual.vertex_colors = [180, 185, 190, 255]
+        material = "metal" if kind in {"tower", "spire", "hub"} else "concrete"
+        # Enhanced colors with more variety
+        color_map = {
+            "tower": [160, 170, 185, 255],
+            "spire": [180, 190, 200, 255],
+            "bridge": [140, 145, 150, 255],
+            "dome": [190, 195, 205, 255],
+            "hub": [170, 180, 195, 255],
+            "hangar": [150, 155, 160, 255],
+        }
+        mesh.visual.vertex_colors = color_map.get(kind, [180, 185, 190, 255])
         return MeshAsset(name=f"{kind}_{idx}", mesh=mesh, material=material, kind=kind)
 
     def _scatter_vegetation(self, schema: WorldSchema, heightmap: np.ndarray, rng: random.Random) -> List[MeshAsset]:
@@ -141,7 +188,10 @@ class ProceduralEngine:
         count = min(count, MAX_VEGETATION_INSTANCES)
         size_m = schema.scale_km * 1000
         assets: List[MeshAsset] = []
-        base_mesh = trimesh.creation.cone(radius=1.1, height=4.5, sections=12)
+        
+        # Create multiple vegetation types for variety
+        tree_mesh = trimesh.creation.cone(radius=1.5, height=6.0, sections=12)
+        bush_mesh = trimesh.creation.icosphere(subdivisions=2, radius=1.2)
 
         hm_res = heightmap.shape[0]
         step = size_m / (hm_res - 1)
@@ -151,11 +201,20 @@ class ProceduralEngine:
             xi = min(int(x / step), hm_res - 2)
             zi = min(int(z / step), hm_res - 2)
             h = float(heightmap[xi, zi])
-            instance = base_mesh.copy()
-            scale = rng.uniform(0.4, min(schema.vegetation.max_height / 4.5, 2.5))
+            
+            # Randomly choose between tree and bush
+            is_tree = rng.random() > 0.3
+            instance = tree_mesh.copy() if is_tree else bush_mesh.copy()
+            
+            if is_tree:
+                scale = rng.uniform(0.5, min(schema.vegetation.max_height / 6.0, 3.5))
+                instance.visual.vertex_colors = [28 + rng.randint(0, 20), 100 + rng.randint(0, 40), 65 + rng.randint(0, 20), 255]
+            else:
+                scale = rng.uniform(0.3, 0.8)
+                instance.visual.vertex_colors = [40 + rng.randint(0, 20), 130 + rng.randint(0, 30), 80 + rng.randint(0, 20), 255]
+            
             instance.apply_scale([scale, scale, scale])
             instance.apply_translation([x, h, z])
-            instance.visual.vertex_colors = [34, 120, 72, 255]
             assets.append(MeshAsset(name=f"veg_{i}", mesh=instance, material="foliage", kind="vegetation"))
         return assets
 

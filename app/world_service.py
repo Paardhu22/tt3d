@@ -90,33 +90,62 @@ def _fallback_schema(design: WorldDesignSpec, seed: int | None) -> WorldSchema:
     rng = random.Random(seed or 42)
 
     base_seed = rng.randint(0, MAX_SEED_SPACE)
-    octaves = rng.randint(4, 7)
-    frequency = rng.uniform(0.3, 0.8)
-    amplitude = rng.uniform(90, 210)
+    # Enhanced terrain parameters for more dramatic landscapes
+    octaves = rng.randint(6, 9)  # More detail layers
+    frequency = rng.uniform(0.35, 0.65)  # Better mountain formation
+    amplitude = rng.uniform(150, 280)  # More dramatic height variations
 
+    # Increased object density and variety for richer scenes
     object_rules: List[ObjectPlacementRule] = [
         ObjectPlacementRule(
             kind="tower",
-            count=rng.randint(8, 22),
-            scale_range=(0.9, 1.6),
-            height_range=(24.0, 90.0),
-            scatter_radius=design.scale_km * 25,
+            count=rng.randint(15, 35),  # More towers
+            scale_range=(0.8, 2.2),  # Wider variety
+            height_range=(30.0, 120.0),  # Taller structures
+            scatter_radius=design.scale_km * 30,
             cluster=True,
         ),
         ObjectPlacementRule(
+            kind="spire",
+            count=rng.randint(10, 25),  # Add spires
+            scale_range=(0.7, 1.8),
+            height_range=(40.0, 100.0),
+            scatter_radius=design.scale_km * 35,
+            cluster=True,
+        ),
+        ObjectPlacementRule(
+            kind="dome",
+            count=rng.randint(8, 18),  # Add domes for variety
+            scale_range=(1.0, 2.5),
+            height_range=(20.0, 50.0),
+            scatter_radius=design.scale_km * 28,
+            cluster=False,
+        ),
+        ObjectPlacementRule(
             kind="bridge",
-            count=max(2, int(design.scale_km // 5)),
-            scale_range=(0.6, 1.3),
-            height_range=(8.0, 22.0),
-            scatter_radius=design.scale_km * 30,
+            count=max(4, int(design.scale_km // 4)),  # More bridges
+            scale_range=(0.8, 1.6),
+            height_range=(12.0, 30.0),
+            scatter_radius=design.scale_km * 32,
             cluster=False,
         ),
     ]
 
+    # Create more interesting spline paths with curves
     base_spline = [
         [0.0, 0.0, 0.0],
-        [design.scale_km * 180, 0.0, design.scale_km * 260],
-        [design.scale_km * 520, 0.0, design.scale_km * 720],
+        [design.scale_km * 120, 0.0, design.scale_km * 180],
+        [design.scale_km * 280, 0.0, design.scale_km * 420],
+        [design.scale_km * 450, 0.0, design.scale_km * 680],
+        [design.scale_km * 580, 0.0, design.scale_km * 850],
+    ]
+    
+    river_spline = [
+        [design.scale_km * 0.2, 0.0, -design.scale_km * 150],
+        [design.scale_km * 180, 0.0, design.scale_km * 80],
+        [design.scale_km * 350, 0.0, design.scale_km * 320],
+        [design.scale_km * 520, 0.0, design.scale_km * 550],
+        [design.scale_km * 650, 0.0, design.scale_km * 780],
     ]
 
     return WorldSchema(
@@ -128,53 +157,49 @@ def _fallback_schema(design: WorldDesignSpec, seed: int | None) -> WorldSchema:
             octaves=octaves,
             frequency=frequency,
             amplitude=amplitude,
-            lacunarity=2.0,
-            persistence=0.5,
-            elevation_scale=design.scale_km * 20,
-            base_height=12.0,
+            lacunarity=2.2,  # More dramatic terrain features
+            persistence=0.52,  # Better detail preservation
+            elevation_scale=design.scale_km * 28,  # More elevation range
+            base_height=15.0,
         ),
-        terrain_features=["canyons", "plateaus", "river deltas"],
+        terrain_features=["dramatic canyons", "soaring plateaus", "river valleys", "mountain peaks"],
         object_rules=object_rules,
         splines=[
             SplineRule(
-                name="arterial_route",
+                name="main_highway",
                 kind="road",
                 control_points=base_spline,
-                width=max(12.0, design.scale_km * 0.4),
-                depth=1.2,
-                material="stone",
+                width=max(14.0, design.scale_km * 0.5),
+                depth=1.5,
+                material="asphalt",
             ),
             SplineRule(
-                name="primary_river",
+                name="scenic_river",
                 kind="river",
-                control_points=[
-                    [design.scale_km * 0.5, 0.0, -design.scale_km * 120],
-                    [design.scale_km * 220, 0.0, design.scale_km * 110],
-                    [design.scale_km * 520, 0.0, design.scale_km * 420],
-                ],
-                width=max(16.0, design.scale_km * 0.8),
-                depth=5.0,
+                control_points=river_spline,
+                width=max(20.0, design.scale_km * 1.0),  # Wider river
+                depth=6.0,  # Deeper river
                 material="water",
             ),
         ],
         vegetation=VegetationRule(
-            density_per_km2=280.0,
-            species=["oak", "pine", "bamboo"] if "forest" in design.biome.lower() else ["shrub", "grass"],
-            max_height=18.0,
+            density_per_km2=450.0,  # Denser vegetation
+            species=["oak", "pine", "birch", "willow"] if "forest" in design.biome.lower() else ["palm", "cactus", "shrub"],
+            max_height=22.0,  # Taller vegetation
         ),
         lighting=LightingConfig(
-            sun_azimuth=135.0,
-            sun_elevation=32.0 if "night" not in design.time_of_day.lower() else 6.0,
-            ambient_intensity=0.52 if "night" in design.time_of_day.lower() else 0.35,
-            sky_color=[0.42, 0.52, 0.72],
-            fog_density=0.02,
-            exposure=1.1,
+            sun_azimuth=145.0,
+            sun_elevation=42.0 if "night" not in design.time_of_day.lower() else 8.0,
+            ambient_intensity=0.42 if "night" in design.time_of_day.lower() else 0.38,
+            sky_color=[0.35, 0.55, 0.85] if "night" in design.time_of_day.lower() else [0.52, 0.70, 0.95],
+            fog_density=0.015,  # Subtle atmospheric fog
+            exposure=1.15,  # Brighter, more vibrant
             mood=design.mood,
         ),
         sky=SkyConfig(
             type="stars" if "night" in design.time_of_day.lower() else "cloudy",
-            cloud_density=0.25,
-            haze=0.08,
+            cloud_density=0.35,  # More dramatic clouds
+            haze=0.12,  # Enhanced atmospheric haze
         ),
     )
 
