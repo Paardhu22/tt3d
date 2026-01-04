@@ -1,0 +1,52 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+
+# Virtual Environments
+venv/
+env/
+ENV/
+*.venv
+shape_venv/
+tripo_venv/
+
+# Environment variables
+.env
+.env.local
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Project outputs
+scene.png
+output.obj
+world_plan.json
+output/
+*.glb
+*.gltf
+*.fbx
+*.obj
+*.mtl
+scene_data.json
+vr_viewer.html
+ImportScene.cs
+generation_report.json
+
+# Generated world files
+output/generated_worlds/*.json
+
+# Model caches
+shap_e_model_cache/
+*.pt
+*.pth
+
+# OS
+.DS_Store
+Thumbs.db
