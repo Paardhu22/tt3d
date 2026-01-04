@@ -41,7 +41,9 @@ class ProceduralEngine:
     """Build a VR-ready world using procedural techniques only."""
 
     def __init__(self, grid_resolution: int = 220):
-        self.grid_resolution = grid_resolution  # Higher resolution for better detail
+        # Higher resolution (220 vs 180) provides more terrain detail at cost of ~21% more memory
+        # For lower memory systems, reduce to 180 or 150
+        self.grid_resolution = grid_resolution
 
     def _generate_heightmap(self, schema: WorldSchema) -> np.ndarray:
         noise_cfg = schema.heightmap

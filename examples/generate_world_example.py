@@ -44,34 +44,39 @@ def generate_world_with_models(description: str):
         if response.status_code == 200:
             result = response.json()
             
-            # Extract metadata from response
-            metadata = result.get("metadata", {})
-            design = metadata.get("design", {})
-            schema = metadata.get("schema", {})
-            layout = metadata.get("layout", {})
-            
-            # Print summary
-            print("\n" + "=" * 70)
-            print("✅ GENERATION COMPLETE!")
-            print("=" * 70)
-            
-            print(f"\n📊 World Summary:")
-            print(f"  Biome: {design.get('biome', 'N/A')}")
-            print(f"  Terrain: {design.get('terrain_type', 'N/A')}")
-            print(f"  Mood: {design.get('mood', 'N/A')}")
-            print(f"  Time of Day: {design.get('time_of_day', 'N/A')}")
-            print(f"  Scale: {design.get('scale_km', 0):.1f} km")
-            print(f"  Objects: {len(layout.get('objects', []))}")
-            print(f"  Vegetation: {layout.get('vegetation_count', 0)}")
-            
-            print(f"\n💾 Files Saved:")
-            print(f"  World Directory: {result.get('world_path', 'N/A')}")
-            print(f"  Preview Image: {result.get('preview_image', 'N/A')}")
-            print(f"  Unity Import Script: {result.get('unity_import', 'N/A')}")
-            
-            print(f"\n⏱️  Total Time: {elapsed:.2f} seconds")
-            
-            return result
+            # Extract metadata from response with error handling
+            try:
+                metadata = result.get("metadata", {})
+                design = metadata.get("design", {})
+                schema = metadata.get("schema", {})
+                layout = metadata.get("layout", {})
+                
+                # Print summary
+                print("\n" + "=" * 70)
+                print("✅ GENERATION COMPLETE!")
+                print("=" * 70)
+                
+                print(f"\n📊 World Summary:")
+                print(f"  Biome: {design.get('biome', 'N/A')}")
+                print(f"  Terrain: {design.get('terrain_type', 'N/A')}")
+                print(f"  Mood: {design.get('mood', 'N/A')}")
+                print(f"  Time of Day: {design.get('time_of_day', 'N/A')}")
+                print(f"  Scale: {design.get('scale_km', 0):.1f} km")
+                print(f"  Objects: {len(layout.get('objects', []))}")
+                print(f"  Vegetation: {layout.get('vegetation_count', 0)}")
+                
+                print(f"\n💾 Files Saved:")
+                print(f"  World Directory: {result.get('world_path', 'N/A')}")
+                print(f"  Preview Image: {result.get('preview_image', 'N/A')}")
+                print(f"  Unity Import Script: {result.get('unity_import', 'N/A')}")
+                
+                print(f"\n⏱️  Total Time: {elapsed:.2f} seconds")
+                
+                return result
+            except (KeyError, TypeError) as e:
+                print(f"\n❌ Error parsing response: {e}")
+                print("Raw response structure may have changed")
+                return None
         else:
             print(f"\n❌ Error {response.status_code}: {response.text}")
             return None
